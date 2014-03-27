@@ -24,6 +24,14 @@ import platform
 from glob import glob
 import re
 
+def form_possible_names(lib, exts):
+    ret = []
+    for ext in exts:
+        ret.append("%s*%s" % (lib, ext))
+    for ext in exts:
+        ret.append("lib%s*%s" % (lib, ext))
+    return ret
+
 def get_library_name(lib):
     paths = [
       '/usr/local/lib64',
@@ -35,21 +43,16 @@ def get_library_name(lib):
       '/usr/X11/lib',
       '/usr/share',
     ]
-    names = [
-      "%s*" % lib,
-      "%s*.so" % lib,
-      "lib%s*" % lib,
-      "lib%s*.so" % lib
+    acceptable_exts = [
+        "",
+        ".so"
     ]
 
     if platform.system() == "Windows":
-        names = [
-            "%s*" % lib,
-            "%s*.dll" % lib,
-            "%s*.dll.a" % lib,
-            "lib%s*" % lib,
-            "lib%s*.dll" % lib,
-            "lib%s*.dll.a" % lib
+        acceptable_exts = [
+            "",
+            ".dll",
+            ".dll.a"
         ]
         paths = list(set([
             os.path.dirname(__file__),
@@ -65,14 +68,9 @@ def get_library_name(lib):
             pass
         paths.extend(list(set(os.environ.get('PATH').split(os.path.pathsep))))
     elif platform.system() == "Darwin":
-        names = [
-            "%s*" % lib,
-            "%s*.so" % lib,
-            "%s*.dylib" % lib,
-            "lib%s*" % lib,
-            "lib%s*.so" % lib,
-            "lib%s*.dylib" % lib
-        ]
+        acceptable_exts.append(".dylib")
+
+    names = form_possible_names(lib, acceptable_exts)
 
     for pn in paths:
         globbed = []
@@ -82,7 +80,7 @@ def get_library_name(lib):
             else:
                 globbed.append(os.path.join(pn, name))
         for filepath in globbed:
-            if os.path.isfile(filepath):
+            if os.path.isfile(filepath) and (os.path.splitext(filepath)[-1] in acceptable_exts):
                 return filepath
     return None
 
